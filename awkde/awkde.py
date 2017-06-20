@@ -129,7 +129,7 @@ class GaussianKDE(BaseEstimator):
         self.__call__.__func__.__doc__ = self.predict.__doc__
         return self.predict(X)
 
-    def fit(self, X, bounds=None):
+    def fit(self, X, bounds=None, weights=None):
         """
         Prepare KDE to describe the data.
 
@@ -147,19 +147,21 @@ class GaussianKDE(BaseEstimator):
             Boundary condition for each dimension. The method of mirrored points
             is used to improve prediction close to bounds. If no bound shall be
             given use None: [[0, None], ...]. (default: None)
+        weights : Per event weights to consider. If `None` all weights are set
+            to one. (default: None)
 
         Returns
         -------
         mean : array-like, shape (n_features)
-            The mean of the given data.
+            The (weighted) mean of the given data.
         cov : array-like, shape (n_features, n_features)
-            The covariance matrix of the given data.
+            The (weighted) covariance matrix of the given data.
         """
         if bounds is not None:
             # TODO: Use mirroring of points near boundary regions and then
             #       constrain KDE to values inside Region but taking all kernels
             #       into account. (only neccessary on hard cuts)
-            raise NotImplementedError("eTODO: Boundary conditions.")
+            raise NotImplementedError("TODO: Boundary conditions.")
         if len(X.shape) != 2:
             raise ValueError("X must have shape (n_samples, n_features).")
 
@@ -344,6 +346,7 @@ class GaussianKDE(BaseEstimator):
                 "sum(norm * exp(-0.5 * dist2 * invbw**2), axis=0)",
                 optimization="aggressive")
             prob[idx:idx + chunk_size] = probi
+            del dist2
         return prob
 
     def _chunker(self, arr, size):
