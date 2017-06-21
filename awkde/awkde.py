@@ -36,8 +36,6 @@ class GaussianKDE(BaseEstimator):
         (default: 0.5)
     diag_cov : bool
         If True, only scale by variance, diagonal cov matrix. (default: False)
-    max_gb : float
-        Maximum gigabyte of RAM occupied in evaluating the KDE.
 
     Notes
     -----
@@ -82,8 +80,7 @@ class GaussianKDE(BaseEstimator):
            Analysis", Vol. 26, Monographs on Statistics and Applied Probability,
            Chapman and Hall, London, 1986.
     """
-    def __init__(self, glob_bw="silverman", alpha=0.5,
-                 diag_cov=False, max_gb=2.):
+    def __init__(self, glob_bw="silverman", alpha=0.5, diag_cov=False):
         self._std_X = None  # Default indicating that no fit was done yet
 
         if type(glob_bw) is str:
@@ -93,11 +90,7 @@ class GaussianKDE(BaseEstimator):
         elif glob_bw <= 0:
             raise ValueError("Global bandwidth must be > 0.")
 
-        if max_gb <= 0:
-            raise ValueError("max_gb must be > 0")
-
         self.alpha = alpha
-        self.max_gb = max_gb
         self.glob_bw = glob_bw
         self.diag_cov = diag_cov
 
@@ -165,11 +158,6 @@ class GaussianKDE(BaseEstimator):
             raise NotImplementedError("TODO: Boundary conditions.")
         if len(X.shape) != 2:
             raise ValueError("X must have shape (n_samples, n_features).")
-
-        # Max numbers in RAM = max_gb / 8B/double * 2^30B/GB
-        self.max_len = int(self.max_gb / 8. * 2**30)
-        if len(X) > self.max_len:
-            raise ValueError("Data to big for given maximum memory size.")
 
         # Transform sample to zero mean and unity covariance matrix
         self.n_kernels, self.n_features = X.shape
