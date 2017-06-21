@@ -83,9 +83,9 @@ axrt.set_title("True log PDF + KDE sample")
 # 1D logE and sigma. Hist very fine, so we get the shape of the PDF and don't
 # have to integrate the KDE PDF.
 axrc.hist(kde_sam[:, 0], bins=250, normed=True, color="#353132")
-axrc.plot(x, fx(x), color="C0")
+axrc.plot(x, fx(x), color="#1e90ff")
 axrb.hist(kde_sam[:, 1], bins=250, normed=True, color="#353132")
-axrb.plot(y, fy(y), color="C0")
+axrb.plot(y, fy(y), color="#1e90ff")
 axrc.set_title("True 1D PDF + KDE sample")
 axrb.set_title("True 1D PDF + KDE sample")
 
@@ -101,4 +101,5 @@ axrc.set_xlabel("x")
 axrb.set_xlabel("y")
 
 fig.tight_layout()
+fig.savefig("example.png", dpi=50)
 plt.show()

@@ -1,5 +1,32 @@
 # Adaptive Width KDE with Gaussian Kernels
 
+## Installation
+
+This uses the awesome [pybind11](https://github.com/pybind/pybind11) package which makes creating C++ bindings super convenient.
+Only the evaluation is written in a small C++ snippet to speed it up, the rest is a pure python implementation.
+
+The setup is taken from the example at https://github.com/pybind/python_example
+Just clone the repository and invoke `pip`:
+
+```bash
+git clone https://github.com/mennthor/awkde
+pip install [--user] -e ./awkde
+```
+
+Try to run the `example/examply.py`:
+
+```
+cd awkde/example
+python example.py
+```
+
+You should get this screen (you need matplotlib for the plot):
+
+![example plot](example/example.png)
+
+
+## Algorithm
+
 The unweighted kernel density estimator is defined as
 
 ![kernel density formula](tex/kernel_dens.png)
@@ -29,6 +56,7 @@ based on that density a local bandwidth parameter is applied.
 All credit for the method goes to [1] and to S. Schoenen and L. Raedel for
 huge parts of the implementation.
 For information on Silverman or Scott rule, see [2] or [3].
+
 
 ## References
 - [1] B. Wang and X. Wang, "Bandwidth Selection for Weighted Kernel Density Estimation", Sep. 2007, DOI: 10.1214/154957804100000000.
