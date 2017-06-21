@@ -9,13 +9,14 @@ Helper tools for standardizing a data sample.
 
 from __future__ import print_function, division, absolute_import
 from future import standard_library
+from builtins import range
 standard_library.install_aliases()
 
 import numpy as _np
 
 
-def _standardize_nd_sample(sam, mean=None, cov=None,
-                           cholesky=True, ret_stats=False, diag=False):
+def standardize_nd_sample(sam, mean=None, cov=None,
+                          cholesky=True, ret_stats=False, diag=False):
     """
     Standardizes a n-dimensional sample using the Mahalanobis distance.
 
@@ -61,7 +62,7 @@ def _standardize_nd_sample(sam, mean=None, cov=None,
     >>> mean = [10, -0.01, 1]
     >>> cov = [[14, -.2, 0], [-.2, .1, -0.1], [0, -0.1, 1]]
     >>> sam = np.random.multivariate_normal(mean, cov, size=1000)
-    >>> std_sam = _standardize_nd_sample(sam)
+    >>> std_sam = standardize_nd_sample(sam)
     >>> print(np.mean(std_sam, axis=0))
     >>> print(np.cov(std_sam, rowvar=False))
     """
@@ -103,7 +104,7 @@ def _standardize_nd_sample(sam, mean=None, cov=None,
         return stand_sam
 
 
-def _shift_and_scale_nd_sample(sam, mean, cov, cholesky=True):
+def shift_and_scale_nd_sample(sam, mean, cov, cholesky=True):
     """
     Shift and scale a nD sample by given mean and covariance matrix.
 

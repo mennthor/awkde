@@ -1,7 +1,7 @@
 # coding: utf-8
 
 from __future__ import division, print_function, absolute_import
-from builtins import range, int
+from builtins import int
 from future import standard_library
 standard_library.install_aliases()
 
@@ -10,7 +10,8 @@ import numexpr
 from sklearn.base import BaseEstimator
 from sklearn.utils import check_random_state
 
-from ._tools import _standardize_nd_sample, _shift_and_scale_nd_sample
+from awkde.tools import standardize_nd_sample, shift_and_scale_nd_sample
+from awkde.backend import kernel_sum
 
 
 class GaussianKDE(BaseEstimator):
@@ -142,7 +143,7 @@ class GaussianKDE(BaseEstimator):
         -----------
         X : array-like, shape (n_samples, n_features)
             Data points defining each kernel position. Each row is a point, each
-            column ist a feature.
+            column is a feature.
         bounds : array-like, shape (n_features, 2)
             Boundary condition for each dimension. The method of mirrored points
             is used to improve prediction close to bounds. If no bound shall be
@@ -171,8 +172,8 @@ class GaussianKDE(BaseEstimator):
             raise ValueError("Data to big for given maximum memory size.")
 
         # Transform sample to zero mean and unity covariance matrix
-        self.n_samples, self.n_features = X.shape
-        self._std_X, self.mean, self.cov = _standardize_nd_sample(
+        self.n_kernels, self.n_features = X.shape
+        self._std_X, self.mean, self.cov = standardize_nd_sample(
             X, cholesky=True, ret_stats=True, diag=self.diag_cov)
 
         # Get global bandwidth number
@@ -184,7 +185,7 @@ class GaussianKDE(BaseEstimator):
                 self._kde_values = self._evaluate(self._std_X, adaptive=False)
 
             # Get local bandwidth from local "density" g
-            g = (_np.exp(_np.sum(_np.log(self._kde_values)) / self.n_samples))
+            g = (_np.exp(_np.sum(_np.log(self._kde_values)) / self.n_kernels))
             # Needed inverted so use power of (+alpha), shape (n_samples)
             self.inv_loc_bw = (self._kde_values / g)**(self.alpha)
 
@@ -197,8 +198,8 @@ class GaussianKDE(BaseEstimator):
         Parameters
         -----------
         X : array-like, shape (n_samples, n_features)
-            Data points defining each kernel position. Each row is a point, each
-            column ist a feature.
+            Data points we want to evaluate the KDE at. Each row is a point,
+            each column is a feature.
 
         Returns
         -------
@@ -214,9 +215,9 @@ class GaussianKDE(BaseEstimator):
             raise ValueError("Dimensions of given points and KDE don't match.")
 
         # Standardize given points to be in the same space as the KDE
-        X = _standardize_nd_sample(X, mean=self.mean, cov=self.cov,
-                                   cholesky=True, ret_stats=False,
-                                   diag=self.diag_cov)
+        X = standardize_nd_sample(X, mean=self.mean, cov=self.cov,
+                                  cholesky=True, ret_stats=False,
+                                  diag=self.diag_cov)
 
         # No need to backtransform, because we only return y-values
         return self._evaluate(X, adaptive=self._adaptive)
@@ -244,7 +245,7 @@ class GaussianKDE(BaseEstimator):
         rndgen = check_random_state(random_state)
 
         # Select randomly all kernels to sample from
-        idx = rndgen.randint(0, self.n_samples, size=n_samples)
+        idx = rndgen.randint(0, self.n_kernels, size=n_samples)
 
         # Because we scaled to standard normal dist, we can draw uncorrelated
         # and the cov is only the inverse bandwidth of each kernel.
@@ -256,7 +257,7 @@ class GaussianKDE(BaseEstimator):
 
         # Retransform to original space
         sample = _np.atleast_2d(rndgen.normal(means, 1. / invbw))
-        return _shift_and_scale_nd_sample(sample, self.mean, self.cov)
+        return shift_and_scale_nd_sample(sample, self.mean, self.cov)
 
     def score(self, X):
         """
@@ -266,7 +267,7 @@ class GaussianKDE(BaseEstimator):
         ----------
         X : array-like, shape (n_samples, n_features)
             Data points included in the score calculation. Each row is a point,
-            each column ist a feature.
+            each column is a feature.
 
         Returns
         -------
@@ -284,97 +285,38 @@ class GaussianKDE(BaseEstimator):
         """
         Evaluate KDE at given points, returning the log-probability.
 
-        Evaluation is RAM friendly: Loop over chunks of given points with a
-        given number of max allowd numbers in RAM.
-        Occupies at most max_gb of memory::
-
-            #doubles = max_gb / 8B/double * 2^30B/GB ~ max_gb/GB * 10^8
-
         Parameters
         -----------
         X : array-like, shape (n_samples, n_features)
-            Data points defining each kernel position. Each row is a point, each
-            column ist a feature.
+            Data points we want to evaluate the KDE at. Each row is a point,
+            each column is a feature.
         adaptive : bool, optional
             Wether to evaluate with fixed or with adaptive kernel.
             (default: True)
 
         Returns
         -------
-        lnprob : array-like, shape (len(X))
-            The ln-probability from the KDE pdf for each point in X.
+        prob : array-like, shape (len(X))
+            The probability from the KDE PDF for each point in X.
         """
-        n = self.n_samples
+        n = self.n_kernels
         d = self.n_features
-        m = len(X)
-
-        # Reshape for proper broadcasting in numexpr
-        std_X = self._std_X.reshape(n, 1, d)
-
-        # At least one point from X but more, if n_samples < max_len / 2
-        chunk_size = min(m, max(int(self.max_len / n), 1))
-        chunked_X = self._chunker(X, chunk_size)
-        nloops = int(_np.ceil(m / chunk_size))
 
         # Get fixed or adaptive bandwidth
-        invbw = _np.ones((n, 1)) / self.glob_bw
+        invbw = _np.ones(n) / self.glob_bw
         if adaptive:
-            invbw *= self.inv_loc_bw.reshape(n, 1)
+            invbw *= self.inv_loc_bw
 
         # Total norm, including gaussian kernel norm with data covariance
         norm = invbw**d / _np.sqrt(_np.linalg.det(2 * _np.pi * self.cov)) / n
         self.norm = norm
 
-        prob = _np.zeros(len(X))
-        mod = m % chunk_size
-        for i, Xi in enumerate(chunked_X):
-            # Make indices for the array location
-            idx = i * chunk_size
-            if mod != 0 and i == (nloops - 1):
-                chunk_size = mod  # Last bit could be smaller
-
-            # Reduce over dim axis: (x^2 + y^2 +z^2 + ...) per point
-            if d == 1:  # Bug(?): `sum` in 1D numexpr takes no axis...
-                dist2 = numexpr.evaluate("(std_X - Xi)**2",
-                    optimization="aggressive").reshape(n, chunk_size)
-            else:  # For d > 1 it works like numpy
-                dist2 = numexpr.evaluate("sum((std_X - Xi)**2, axis=2)",
-                                         optimization="aggressive")
-
-            # Reduce over last dim: Sum over each kernel per point
-            probi = numexpr.evaluate(
-                "sum(norm * exp(-0.5 * dist2 * invbw**2), axis=0)",
-                optimization="aggressive")
-            prob[idx:idx + chunk_size] = probi
-            del dist2
-        return prob
-
-    def _chunker(self, arr, size):
-        """
-        Split array into chunks with given size, last bit may be shorter.
-
-        From Stackoverflow: 434287, nosklo :+1:
-
-        Parameters
-        ----------
-        arr : array-like, shape (n_samples, n_features)
-            Array to be split in chunks.
-        size : int
-            Number of elements in each chunk.
-
-        Returns
-        -------
-        chunks : iterator, length int(ceil(len(arr) / size))
-            Iterator returning a new chunk with length `size` in each
-            iteration. The last element has a smaller length, if
-            len(arr) % size != 0.
-        """
-        return (arr[pos:pos + size] for pos in range(0, len(arr), size))
+        return kernel_sum(self._std_X, X, invbw, norm)
 
     def _get_glob_bw(self, glob_bw):
         """Simple wrapper to handle string args given for global bw."""
         dim = self.n_features
-        nsam = self.n_samples
+        nsam = self.n_kernels
         if glob_bw == "silverman":
             return _np.power(nsam * (dim + 2.0) / 4.0, -1. / (dim + 4))
         elif glob_bw == "scott":
