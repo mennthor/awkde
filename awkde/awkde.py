@@ -172,6 +172,9 @@ class GaussianKDE(BaseEstimator):
             if self._kde_values is None:
                 self._kde_values = self._evaluate(self._std_X, adaptive=False)
 
+            if len(self._kde_values) != self.n_kernels:
+                raise ValueError("KDE values and given X don't match.")
+
             # Get local bandwidth from local "density" g
             g = (_np.exp(_np.sum(_np.log(self._kde_values)) / self.n_kernels))
             # Needed inverted so use power of (+alpha), shape (n_samples)
