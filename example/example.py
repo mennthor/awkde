@@ -13,7 +13,7 @@ import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
 from matplotlib.colors import LogNorm
 
-from awkde import GaussianKDE, json2kde
+from awkde import GaussianKDE
 
 
 rndgen = np.random.RandomState(seed=3575)  # ESEL
@@ -43,7 +43,7 @@ outf = "./example_KDE.json"
 print("Saving model to {}".format(outf))
 kde.to_json(outf)
 print("Loading same model from {}".format(outf))
-kde = json2kde(outf)
+kde = GaussianKDE.from_json(outf)
 
 # Evaluate at dense grid
 minx, maxx = np.amin(sample[:, 0]), np.amax(sample[:, 0])
@@ -93,8 +93,8 @@ axrt.pcolormesh(XX, YY, fZ, cmap="Blues", norm=LogNorm())
 axrt.scatter(logE_sam, sigma_sam, marker=".", color="#353132", s=1)
 axrt.set_title("True log PDF + KDE sample")
 
-# 1D logE and sigma. Hist very fine, so we get the shape of the PDF and don't
-# have to integrate the KDE PDF.
+# 1D x1, x2 hists. Hist very fine, so we get the shape of the PDF and don't
+# have to integrate the KDE PDF numerically.
 axrc.hist(kde_sam[:, 0], bins=250, normed=True, color="#353132")
 axrc.plot(x, fx(x), color="#1e90ff")
 axrb.hist(kde_sam[:, 1], bins=250, normed=True, color="#353132")
