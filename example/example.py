@@ -115,4 +115,4 @@ axrb.set_xlabel("x2")
 
 fig.tight_layout()
 fig.savefig("example.png", dpi=50)
-plt.show()
+# plt.show()
