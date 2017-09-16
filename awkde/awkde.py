@@ -15,67 +15,6 @@ from awkde.tools import standardize_nd_sample, shift_and_scale_nd_sample
 import awkde.backend as backend
 
 
-def json2kde(fpath, verb=False):
-    """
-    Build a awKDE object from a JSON dict with the needed parts.
-
-    Parameters
-    ----------
-    fpath : string
-        Path to the JSON file. Must have keys:
-
-        - 'alpha', 'diag_cov', 'glob_bw': See GaussianKDE docstring.
-        - 'kde_Y': KDE function values at points 'kde_X_std' used for the
-                   adaptive kernel computation.
-        - 'kde_X_std': Standardized sample in shape ``(nsamples, nfeatures)``.
-        - 'kde_X_mean': Mean vector of the standardized sample.
-        - 'kde_X_cov': Covariance matrix of the stadardized sample.
-    verb : bool, optional
-        If ``True`` print model summary. (default: ``False``)
-
-    Returns
-    -------
-    kde : KDE.GaussianKDE
-        KDE object in fitted state ready to evaluate or sample from.
-    """
-    with open(os.path.abspath(fpath), "r") as f:
-        d = json.load(f)
-
-    kde = GaussianKDE(glob_bw=d["glob_bw"], alpha=d["alpha"],
-                      diag_cov=d["diag_cov"])
-
-    # Reconstruct all internals without using fit again
-    kde._std_X = np.atleast_2d(d["kde_X_std"])
-    kde._n_kernels, kde._n_features = kde._std_X.shape
-    kde._mean = np.atleast_1d(d["kde_X_mean"])
-    kde._cov = np.atleast_2d(d["kde_X_cov"])
-
-    if len(kde._mean) != kde._n_features:
-        raise ValueError("'kde_X_mean' has not the same dim as the X values.")
-    if kde._cov.shape != (kde._n_features, kde._n_features):
-        raise ValueError("'kde_X_cov' has not shape (n_features, n_features).")
-
-    if d["kde_Y"] is not None:
-        if d["alpha"] is None:
-            raise ValueError("Saved 'alpha' is None, but 'kde_Y' is not.")
-        # Set kde values and alpha to restore inverse bandwidth internally
-        kde._kde_values = np.atleast_1d(d["kde_Y"])
-        kde.alpha = d["alpha"]
-
-    if len(kde._kde_values) != kde._n_kernels:
-        raise ValueError("'kde_Y' has not the same length as 'kde_X_std'.")
-
-    if verb:
-        print("Loaded KDE model from {}".format(fpath))
-        print("- glob_bw : ".format(kde._glob_bw))
-        print("- alpha   : ".format(kde._alpha))
-        print("  - adaptive : ".format(kde._adaptive))
-        print("- Nr. of kernels  : ".format(kde._n_kernels))
-        print("- Nr. of data dim : ".format(kde._n_features))
-
-    return kde
-
-
 class GaussianKDE(BaseEstimator):
     """
     GaussianKDE
@@ -386,6 +325,70 @@ class GaussianKDE(BaseEstimator):
             json.dump(out, f, indent=2)
 
         return
+
+    @classmethod
+    def from_json(cls, fpath, verb=False):
+        """
+        Build a awKDE object from a JSON dict with the needed parts.
+
+        Parameters
+        ----------
+        fpath : string
+            Path to the JSON file. Must have keys:
+
+            - 'alpha', 'diag_cov', 'glob_bw': See GaussianKDE docstring.
+            - 'kde_Y': KDE function values at points 'kde_X_std' used for the
+                       adaptive kernel computation.
+            - 'kde_X_std': Standardized sample in shape
+                           ``(nsamples, nfeatures)``.
+            - 'kde_X_mean': Mean vector of the standardized sample.
+            - 'kde_X_cov': Covariance matrix of the stadardized sample.
+        verb : bool, optional
+            If ``True`` print model summary. (default: ``False``)
+
+        Returns
+        -------
+        kde : KDE.GaussianKDE
+            KDE object in fitted state, ready to evaluate or sample from.
+        """
+        with open(os.path.abspath(fpath), "r") as f:
+            d = json.load(f)
+
+        kde = cls(glob_bw=d["glob_bw"], alpha=d["alpha"],
+                  diag_cov=d["diag_cov"])
+
+        # Reconstruct all internals without using fit again
+        kde._std_X = np.atleast_2d(d["kde_X_std"])
+        kde._n_kernels, kde._n_features = kde._std_X.shape
+        kde._mean = np.atleast_1d(d["kde_X_mean"])
+        kde._cov = np.atleast_2d(d["kde_X_cov"])
+
+        if len(kde._mean) != kde._n_features:
+            raise ValueError("'kde_X_mean' has not the same dimension " +
+                             "as the X values.")
+        if kde._cov.shape != (kde._n_features, kde._n_features):
+            raise ValueError("'kde_X_cov' has not shape " +
+                             "(n_features, n_features).")
+
+        if d["kde_Y"] is not None:
+            if d["alpha"] is None:
+                raise ValueError("Saved 'alpha' is None, but 'kde_Y' is not.")
+            # Set kde values and alpha to restore inverse bandwidth internally
+            kde._kde_values = np.atleast_1d(d["kde_Y"])
+            kde.alpha = d["alpha"]
+
+        if len(kde._kde_values) != kde._n_kernels:
+            raise ValueError("'kde_Y' has not the same length as 'kde_X_std'.")
+
+        if verb:
+            print("Loaded KDE model from {}".format(fpath))
+            print("- glob_bw : ".format(kde._glob_bw))
+            print("- alpha   : ".format(kde._alpha))
+            print("  - adaptive : ".format(kde._adaptive))
+            print("- Nr. of kernels  : ".format(kde._n_kernels))
+            print("- Nr. of data dim : ".format(kde._n_features))
+
+        return kde
 
     # Private Methods
     def _evaluate(self, X, adaptive):
