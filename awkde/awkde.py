@@ -1,7 +1,8 @@
 # coding: utf-8
 
-from __future__ import division, print_function, absolute_import
-from builtins import int
+from __future__ import (division, print_function, absolute_import,
+                        unicode_literals)
+from builtins import int, open
 from future import standard_library
 standard_library.install_aliases()
 
@@ -124,11 +125,12 @@ class GaussianKDE(BaseEstimator):
             if alpha < 0 or alpha > 1:
                 raise ValueError("alpha must be in [0, 1]")
             self._adaptive = True
-        if self._std_X is not None:
-            # Recalculate local bandwidth if we already have a fitted model
-            self._calc_local_bandwidth()
 
         self._alpha = alpha
+
+        if self._std_X is not None and self._adaptive:
+            # Recalculate local bandwidth if we already have a fitted model
+            self._calc_local_bandwidth()
 
     @property
     def glob_bw(self):
@@ -292,7 +294,12 @@ class GaussianKDE(BaseEstimator):
         if self._std_X is None:
             raise ValueError("KDE has not been fitted to data yet.")
 
-        probs = self.predict(X)
+        X = np.atleast_2d(X)
+        _, n_feat = X.shape
+        if n_feat != self._n_features:
+            raise ValueError("Dimensions of given points and KDE don't match.")
+
+        probs = self.predict(np.atleast_2d(X))
         if np.any(probs <= 0):
             return -np.inf
         else:
@@ -321,8 +328,8 @@ class GaussianKDE(BaseEstimator):
         else:
             out["kde_Y"] = None
 
-        with open(os.path.abspath(fpath), "w") as f:
-            json.dump(out, f, indent=2)
+        with open(os.path.abspath(fpath), "wb") as f:
+            json.dump(obj=out, fp=f, indent=2)
 
         return
 
@@ -351,7 +358,7 @@ class GaussianKDE(BaseEstimator):
         kde : KDE.GaussianKDE
             KDE object in fitted state, ready to evaluate or sample from.
         """
-        with open(os.path.abspath(fpath), "r") as f:
+        with open(os.path.abspath(fpath), "rb") as f:
             d = json.load(f)
 
         kde = cls(glob_bw=d["glob_bw"], alpha=d["alpha"],
@@ -382,11 +389,11 @@ class GaussianKDE(BaseEstimator):
 
         if verb:
             print("Loaded KDE model from {}".format(fpath))
-            print("- glob_bw : ".format(kde._glob_bw))
-            print("- alpha   : ".format(kde._alpha))
-            print("  - adaptive : ".format(kde._adaptive))
-            print("- Nr. of kernels  : ".format(kde._n_kernels))
-            print("- Nr. of data dim : ".format(kde._n_features))
+            print("- glob_bw         : {:.3f}".format(kde._glob_bw))
+            print("- alpha           : {:.3f}".format(kde._alpha))
+            print("- adaptive        : {}".format(kde._adaptive))
+            print("- Nr. of kernels  : {:d}".format(kde._n_kernels))
+            print("- Nr. of data dim : {:d}".format(kde._n_features))
 
         return kde
 

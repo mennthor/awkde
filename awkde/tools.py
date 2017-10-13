@@ -9,7 +9,6 @@ Helper tools for standardizing a data sample.
 
 from __future__ import print_function, division, absolute_import
 from future import standard_library
-from builtins import range
 standard_library.install_aliases()
 
 import numpy as _np
