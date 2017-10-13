@@ -7,6 +7,7 @@ from future import standard_library
 standard_library.install_aliases()
 
 import os
+import sys
 import json
 import numpy as np
 from sklearn.base import BaseEstimator
@@ -328,7 +329,12 @@ class GaussianKDE(BaseEstimator):
         else:
             out["kde_Y"] = None
 
-        with open(os.path.abspath(fpath), "wb") as f:
+        # json seems to behave differently in py2 vs py3 ...
+        if sys.version_info[0] < 3:
+            mode = "wb"
+        else:
+            mode = "w"
+        with open(os.path.abspath(fpath), mode) as f:
             json.dump(obj=out, fp=f, indent=2)
 
         return
