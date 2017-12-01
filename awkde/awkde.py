@@ -309,7 +309,7 @@ class GaussianKDE(BaseEstimator):
     def to_json(self, fpath):
         """
         Write out the relevant parameters for the KDE model as a JSON file,
-        which can be used to reconstruct the whole model with ``json2kde``.
+        which can be used to reconstruct the whole model with ``from_json``.
 
         Parameters
         ----------
