@@ -83,21 +83,21 @@ axrc = fig.add_subplot(gs[1, 2])
 axrb = fig.add_subplot(gs[2, 2])
 
 # Main plot
-axl.pcolormesh(XX, YY, ZZ, cmap="Blues", norm=LogNorm())
+axl.pcolormesh(XX, YY, ZZ, cmap="Blues", norm=LogNorm(), shading='auto')
 axl.scatter(logE_sam, sigma_sam, marker=".", color="#353132",
-            edgecolor="", s=30)
+            edgecolor=None, s=30)
 axl.set_title("KDE log PDF + original sample")
 
 # Top right: truth with scatter
-axrt.pcolormesh(XX, YY, fZ, cmap="Blues", norm=LogNorm())
+axrt.pcolormesh(XX, YY, fZ, cmap="Blues", norm=LogNorm(), shading='auto')
 axrt.scatter(logE_sam, sigma_sam, marker=".", color="#353132", s=1)
 axrt.set_title("True log PDF + KDE sample")
 
 # 1D x1, x2 hists. Hist very fine, so we get the shape of the PDF and don't
 # have to integrate the KDE PDF numerically.
-axrc.hist(kde_sam[:, 0], bins=250, normed=True, color="#353132")
+axrc.hist(kde_sam[:, 0], bins=250, density=True, color="#353132")
 axrc.plot(x, fx(x), color="#1e90ff")
-axrb.hist(kde_sam[:, 1], bins=250, normed=True, color="#353132")
+axrb.hist(kde_sam[:, 1], bins=250, density=True, color="#353132")
 axrb.plot(y, fy(y), color="#1e90ff")
 axrc.set_title("True 1D PDF + KDE sample")
 axrb.set_title("True 1D PDF + KDE sample")
