@@ -10,8 +10,9 @@ Just clone the repository and invoke `pip`:
 
 ```bash
 git clone https://github.com/mennthor/awkde
-pip install [--user] -e ./awkde
+pip install [--user] [-e] ./awkde
 ```
+Note: `--user` and `-e` are optional. Use `--user` to install in your user site-package directory (recommended) and `-e` if you want to only link the files to the site-package directories, so that when you make any changes in your local copy, you don't have to reinstall all the time.
 
 Try to run the `example/examply.py`:
 
@@ -20,7 +21,7 @@ cd awkde/example
 python example.py
 ```
 
-You should get this screen (you need matplotlib for the plot):
+You should get this plot in the examples folder (you need matplotlib for the plot):
 
 ![example plot](example/example.png)
 
