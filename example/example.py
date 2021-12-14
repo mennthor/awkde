@@ -58,6 +58,11 @@ grid_pts = np.array(list(map(np.ravel, [XX, YY]))).T
 zz = kde.predict(grid_pts)
 ZZ = zz.reshape(XX.shape)
 
+# These are bin edges for pcolormesh, len = len(x) + 1
+dx2, dy2 = (x[1] - x[0]) / 2., (y[1] - y[0]) / 2.
+bx = np.concatenate((x - dx2, [x[-1] + dx2]))
+by = np.concatenate((y - dy2, [y[-1] + dy2]))
+
 
 # Evaluate true PDFs at same grid
 def fx(x):
@@ -86,13 +91,13 @@ color_of_points = '#351322'
 color_of_dist = "#1e90ff"
 
 # Main plot
-axl.pcolormesh(XX, YY, ZZ, cmap="Blues", norm=LogNorm(), shading="auto")
+axl.pcolormesh(bx, by, ZZ, cmap="Blues", norm=LogNorm(), shading="flat")
 axl.scatter(logE_sam, sigma_sam, marker=".", color=color_of_points,
             edgecolor="none", s=30)
 axl.set_title("KDE log PDF + original sample")
 
 # Top right: truth with scatter
-axrt.pcolormesh(XX, YY, fZ, cmap="Blues", norm=LogNorm(), shading='auto')
+axrt.pcolormesh(bx, by, fZ, cmap="Blues", norm=LogNorm(), shading='flat')
 axrt.scatter(logE_sam, sigma_sam, marker=".", color=color_of_points, s=1)
 axrt.set_title("True log PDF + KDE sample")
 
