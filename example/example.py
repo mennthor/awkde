@@ -86,12 +86,13 @@ color_of_points = '#351322'
 color_of_dist = "#1e90ff"
 
 # Main plot
-axl.pcolormesh(XX, YY, ZZ, cmap="Blues", norm=LogNorm())
-axl.scatter(logE_sam, sigma_sam, marker=".", color=color_of_points, s=30)
+axl.pcolormesh(XX, YY, ZZ, cmap="Blues", norm=LogNorm(), shading="auto")
+axl.scatter(logE_sam, sigma_sam, marker=".", color=color_of_points,
+            edgecolor="none", s=30)
 axl.set_title("KDE log PDF + original sample")
 
 # Top right: truth with scatter
-axrt.pcolormesh(XX, YY, fZ, cmap="Blues", norm=LogNorm())
+axrt.pcolormesh(XX, YY, fZ, cmap="Blues", norm=LogNorm(), shading='auto')
 axrt.scatter(logE_sam, sigma_sam, marker=".", color=color_of_points, s=1)
 axrt.set_title("True log PDF + KDE sample")
 
