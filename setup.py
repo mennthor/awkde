@@ -1,112 +1,50 @@
 """
-Example adapted from: https://github.com/pybind/python_example
+Note: `pip install --user pybind11` mandatory. Did not really test if the
+instal_requires and import workaround below works. If not, just install it
+manually first.
+
+Credits:
+- https://pybind11.readthedocs.io/en/latest/compiling.html
+- https://github.com/pybind/python_example
 """
 
-from setuptools import setup, Extension
-from setuptools.command.build_ext import build_ext
-import sys
-import setuptools
+from setuptools import setup, find_packages
+
+# pybind11.readthedocs.io/en/stable/compiling.html#classic-setup-requires
+try:
+    from pybind11.setup_helpers import Pybind11Extension, build_ext
+except ImportError:
+    # If pybind11 is not installed, these are used first and in a second pass
+    # done automatically the pybind11 is then installed as the requirement
+    from setuptools import Extension as Pybind11Extension
+    build_ext = None
+
 
 __version__ = "0.1"
 
-
-class get_pybind_include(object):
-    """
-    Helper class to determine the pybind11 include path
-
-    The purpose of this class is to postpone importing pybind11 until it is
-    actually installed, so that the ``get_include()`` method can be invoked.
-    """
-    def __init__(self, user=False):
-        self.user = user
-
-    def __str__(self):
-        import pybind11
-        return pybind11.get_include(self.user)
-
-
 ext_modules = [
-    Extension(
-        "awkde.backend",
-        ["cpp/backend.cpp"],
-        include_dirs=[
-            # Path to pybind11 headers
-            get_pybind_include(),
-            get_pybind_include(user=True)
-        ],
-        language="c++"
-    ),
+    Pybind11Extension(
+        # Module name (toplevel same as python, then same as in C++ file)
+        name="awkde.backend",
+        sources=["cpp/backend.cpp"],
+        extra_compile_args=["-O3"],  # "-ggdb" for debugging stuff
+        ),
 ]
-
-
-# As of Python 3.6, CCompiler has a `has_flag` method.
-# cf http://bugs.python.org/issue26689
-def has_flag(compiler, flagname):
-    """
-    Return a boolean indicating whether a flag name is supported on
-    the specified compiler.
-    """
-    import tempfile
-    with tempfile.NamedTemporaryFile("w", suffix=".cpp") as f:
-        f.write("int main (int argc, char **argv) { return 0; }")
-        try:
-            compiler.compile([f.name], extra_postargs=[flagname])
-        except setuptools.distutils.errors.CompileError:
-            return False
-    return True
-
-
-def cpp_flag(compiler):
-    """
-    Return the -std=c++[11/14] compiler flag.
-
-    The c++14 is prefered over c++11 (when it is available).
-    """
-    if has_flag(compiler, "-std=c++14"):
-        return "-std=c++14"
-    elif has_flag(compiler, "-std=c++11"):
-        return "-std=c++11"
-    else:
-        raise RuntimeError("Unsupported compiler -- at least C++11 support "
-                           "is needed!")
-
-
-class BuildExt(build_ext):
-    """A custom build extension for adding compiler-specific options."""
-    c_opts = {
-        "msvc": ["/EHsc"],
-        "unix": [],
-    }
-
-    if sys.platform == "darwin":
-        c_opts["unix"] += ["-stdlib=libc++", "-mmacosx-version-min=10.7"]
-
-    def build_extensions(self):
-        ct = self.compiler.compiler_type
-        opts = self.c_opts.get(ct, [])
-        if ct == "unix":
-            opts.append('-DVERSION_INFO="%s"' % self.distribution.get_version())
-            opts.append(cpp_flag(self.compiler))
-            if has_flag(self.compiler, "-fvisibility=hidden"):
-                opts.append("-fvisibility=hidden")
-        elif ct == "msvc":
-            opts.append('/DVERSION_INFO=\\"%s\\"' %
-                        self.distribution.get_version())
-        for ext in self.extensions:
-            ext.extra_compile_args = opts
-        build_ext.build_extensions(self)
-
 
 setup(
     name="awkde",
-    version=__version__,
+    version="0.1",
+    description="Common scripts for E@H post-processing",
     author="Thorben Menne",
-    author_email="thorben.menne@tu-dortmund.de",
-    url="https://github.com/mennthor/awkde",
-    description="Adaptive width gaussian KDE",
-    long_description="",
-    ext_modules=ext_modules,
+    author_email="thorben.menne@aei.mpg.de",
+    url="https://gitlab.aei.uni-hannover.de/thmenn/postproc",
+    packages=find_packages(),
+    setup_requires=[
+        "pybind11",  # For this install script
+    ],
     install_requires=["numpy", "scipy", "scikit-learn", "pybind11", "future"],
-    cmdclass={"build_ext": BuildExt},
-    zip_safe=False,
+    ext_modules=ext_modules,  # Compiled external modules
+    cmdclass={
+        "build_ext": build_ext  # Finds highest supported C++ version
+    },
 )

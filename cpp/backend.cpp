@@ -57,8 +57,11 @@ py::array_t<T> kernel_sum (const py::array_t<T>& X,
 }
 
 
-PYBIND11_PLUGIN(backend) {
-    py::module m("backend", R"pbdoc(
+// ////////////////////////////////////////////////////////////////////////////
+// pybind11 binding stuff
+PYBIND11_MODULE(backend, m) {
+    // Module docstring
+    m.doc() = R"pbdoc(
         Pybind11 C++ backend for awkde
         ------------------------------
 
@@ -68,33 +71,35 @@ PYBIND11_PLUGIN(backend) {
            :toctree: _generate
 
            kernel_sum
-    )pbdoc");
+    )pbdoc";
 
+    // Method docstrings (easier to read when separated)
+    // Note: using C++ multi-line literals (pbdoc delimiter)
     auto docstr = R"pbdoc(
-                    kernel_sum
+    kernel_sum
 
-                    Takes an array of kernel points `X` and points `Y` to
-                    evaluate the KDE at and returns the KDE PDF values for
-                    each point in `Y`.
+    Takes an array of kernel points `X` and points `Y` to
+    evaluate the KDE at and returns the KDE PDF values for
+    each point in `Y`.
 
-                    Parameters
-                    ----------
-                    X : double array, shape (len(X), ndim)
-                        Data points defining each kernel position. Each row is
-                        a point, each column is a feature.
-                    Y : double array, shape (len(Y), ndim)
-                        Data points we want to evaluate the KDE at. Each row is
-                        a point, each column is a feature.
-                    invbw : double array, shape (len(X))
-                        Inverse kernel bandwidth, acting as :math:`1 / sigma^2`.
-                    norm : double array, shape (len(X))
-                        Kernel gaussian norm for `ndim` dimensions.
+    Parameters
+    ----------
+    X : double array, shape (len(X), ndim)
+        Data points defining each kernel position. Each row is
+        a point, each column is a feature.
+    Y : double array, shape (len(Y), ndim)
+        Data points we want to evaluate the KDE at. Each row is
+        a point, each column is a feature.
+    invbw : double array, shape (len(X))
+        Inverse kernel bandwidth, acting as :math:`1 / sigma^2`.
+    norm : double array, shape (len(X))
+        Kernel gaussian norm for `ndim` dimensions.
 
-                    Returns
-                    -------
-                    eval : float array, shape (len(Y))
-                        The probability from the KDE PDF for each point in `Y`.
-                  )pbdoc";
+    Returns
+    -------
+    eval : float array, shape (len(Y))
+        The probability from the KDE PDF for each point in `Y`.
+    )pbdoc";
 
     // Define the actual template typess
     m.def("kernel_sum", &kernel_sum<double>, docstr,
@@ -107,5 +112,4 @@ PYBIND11_PLUGIN(backend) {
 #else
     m.attr("__version__") = py::str("dev");
 #endif
-    return m.ptr();
 }
